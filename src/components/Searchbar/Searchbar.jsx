@@ -1,5 +1,5 @@
-import PropTypes from 'prop-types';
-import { Component } from 'react';
+// import PropTypes from 'prop-types';
+import { useState } from 'react';
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
 import {
   SearcHeader,
@@ -10,25 +10,17 @@ import {
   Input,
 } from './Searchbar.styled';
 
-export class Searchbar extends Component {
-  static propeTypes = {
-    handleSubmit: PropTypes.func.isRequired,
+export const Searchbar = ({ handleSubmit }) => {
+  const [value, setValue] = useState('');
+
+  const onFormChange = e => {
+    const inputValue = e.currentTarget.value.trim();
+    setValue(inputValue);
   };
 
-  state = {
-    value: '',
-  };
-
-  onFormChange = event => {
-    const value = event.currentTarget.value.trim();
-    this.setState({ value: value });
-  };
-
-  onSearchSubmit = event => {
-    const { value } = this.state;
-
-    event.preventDefault();
-    this.props.handleSubmit(value);
+  const onSearchSubmit = e => {
+    e.preventDefault();
+    handleSubmit(value);
 
     if (value === '') {
       Notify.warning('Input is still empty, please type something!', {
@@ -39,36 +31,28 @@ export class Searchbar extends Component {
       });
       return;
     }
-
-    this.reset();
+    setValue('');
   };
 
-  reset = () => {
-    this.setState({ value: '' });
-  };
+  return (
+    <SearcHeader>
+      <SearchForm onSubmit={onSearchSubmit}>
+        <SearchButton type="submit">
+          <SearchLabel>
+            <SearchIcon />
+          </SearchLabel>
+        </SearchButton>
 
-  render() {
-    const { value } = this.state;
-    return (
-      <SearcHeader>
-        <SearchForm onSubmit={this.onSearchSubmit}>
-          <SearchButton type="submit">
-            <SearchLabel>
-              <SearchIcon />
-            </SearchLabel>
-          </SearchButton>
-
-          <Input
-            name="input"
-            type="text"
-            autoComplete="off"
-            autoFocus
-            placeholder="Search images and photos"
-            onChange={this.onFormChange}
-            value={value}
-          />
-        </SearchForm>
-      </SearcHeader>
-    );
-  }
-}
+        <Input
+          name="input"
+          type="text"
+          autoComplete="off"
+          autoFocus
+          placeholder="Search images and photos"
+          onChange={onFormChange}
+          value={value}
+        />
+      </SearchForm>
+    </SearcHeader>
+  );
+};

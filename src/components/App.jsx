@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { GlobalStyle } from 'GlobalStyle';
 import { AppWrapper } from './App.styled';
 import { Searchbar } from './Searchbar/Searchbar';
@@ -8,86 +8,75 @@ import { Modal } from './Modal/Modal';
 import Loader from '../components/Loader/Loader';
 import { getImages } from 'services/api';
 
-export class App extends Component {
-  state = {
-    currentQuery: '',
-    images: [],
-    currentPage: 1,
-    status: 'idle',
-    totalHits: null,
-    imageURL: '',
-    showModal: false,
+export const App = () => {
+  const [currentQuery, setCurrentQuery] = useState('');
+  const [images, setImages] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [status, setStatus] = useState('idle');
+  const [totalHits, setTotalHits] = useState(null);
+  const [imageURL, setImageURL] = useState('');
+  const [showModal, setShowModal] = useState('');
+
+  const onFormSubmit = query => {
+    setCurrentQuery(query);
+    setImages([]);
+    setCurrentPage(1);
+    setStatus('idle');
   };
 
-  onFormSubmit = query => {
-    this.setState({
-      currentQuery: query,
-      images: [],
-      currentPage: 1,
-      status: 'idle',
-    });
-  };
+  useEffect(() => {
+    if (!currentQuery) return;
 
-  async componentDidUpdate(_, prevState) {
-    try {
-      const { currentQuery, currentPage } = this.state;
-      if (
-        prevState.currentPage !== currentPage ||
-        prevState.currentQuery !== currentQuery
-      ) {
-        this.setState({ status: 'pending' });
-        const data = await getImages(currentQuery, currentPage);
-        const { hits, totalHits } = data;
+    async function getPhoto() {
+      try {
+        setStatus('pending');
+        const { hits, totalHits } = await getImages(currentQuery, currentPage);
 
         if (totalHits === 0 || (hits.length === 0 && hits.totalHits > 0)) {
-          this.setState({ status: 'idle' });
+          setStatus('idle');
           return;
         }
-        this.setState({ status: 'resolved' });
-        this.setState(prevState => ({
-          images: [...prevState.images, ...hits],
-        }));
-        this.setState({ totalHits: totalHits });
+        setStatus('resolved');
+        setImages(state => [...state, ...hits]);
+        setTotalHits(totalHits);
         return;
+      } catch (error) {
+        console.log(error);
+        setStatus('rejected');
       }
-    } catch (error) {
-      console.log(error);
-      this.setState({ status: 'rejected' });
     }
-  }
 
-  onLoadMoreBtnClick = () => {
-    this.setState(prevState => ({ currentPage: prevState.currentPage + 1 }));
+    getPhoto();
+  }, [currentPage, currentQuery]);
+
+  const onLoadMoreBtnClick = () => {
+    setCurrentPage(currentPage + 1);
   };
 
-  getImageURL = largeImageURL => {
-    this.setState({ imageURL: largeImageURL });
-    this.setState({ showModal: true });
+  const getImageURL = largeImageURL => {
+    setImageURL(largeImageURL);
+    setShowModal(true);
   };
 
-  closeModal = () => {
-    this.setState({ showModal: false });
+  const closeModal = () => {
+    setShowModal(false);
   };
 
-  render() {
-    const { images, status, totalHits, showModal, imageURL } = this.state;
-
-    return (
-      <AppWrapper>
-        <Searchbar handleSubmit={this.onFormSubmit} />
-        {images.length > 0 && (
-          <ImageGallery images={images} onClick={this.getImageURL} />
+  return (
+    <AppWrapper>
+      <Searchbar handleSubmit={onFormSubmit} />
+      {images.length > 0 && (
+        <ImageGallery images={images} onClick={getImageURL} />
+      )}
+      {status === 'resolved' &&
+        images.length % 12 === 0 &&
+        totalHits.length !== 0 && (
+          <Button text={'Load more'} onClick={onLoadMoreBtnClick} />
         )}
-        {status === 'resolved' &&
-          images.length % 12 === 0 &&
-          totalHits.length !== 0 && (
-            <Button text={'Load more'} onClick={this.onLoadMoreBtnClick} />
-          )}
-        {status === 'pending' && <Loader />}
-        {showModal && <Modal onClose={this.closeModal} src={imageURL}></Modal>}
+      {status === 'pending' && <Loader />}
+      {showModal && <Modal onClose={closeModal} src={imageURL}></Modal>}
 
-        <GlobalStyle />
-      </AppWrapper>
-    );
-  }
-}
+      <GlobalStyle />
+    </AppWrapper>
+  );
+};
